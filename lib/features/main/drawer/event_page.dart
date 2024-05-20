@@ -3,8 +3,6 @@ import 'package:evapp/features/main/settings/settings.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:evapp/constants/app_color_constants.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
 import 'package:flutter/services.dart';
 
 class EventPage extends StatefulWidget {
@@ -63,37 +61,6 @@ Future<void> _fetchJoinedEvents() async {
 }
 
 
-  Future<void> sendNotification(String token, String title, String body) async {
-    final serverKey =
-        'AAAAgUUTWes:APA91bH9DcJHYePCEg433vGo2O8LDMP-nAIpa0te8vhpXwjojTqw1BL28M2WglzgIEYa6hGcpZ4Xzi_r98Ra85FZGFPlIIyna2-9YMXuzkYbhHBMgj4yANjAGeX1SbbME8uoiiKlh7OP';
-    final url = Uri.parse('https://fcm.googleapis.com/fcm/send');
-
-    final payload = {
-      'to': token,
-      'notification': {
-        'title': title,
-        'body': body,
-      },
-    };
-
-    final headers = {
-      'Content-Type': 'application/json',
-      'Authorization': 'key=$serverKey',
-    };
-
-    final response = await http.post(
-      url,
-      headers: headers,
-      body: jsonEncode(payload),
-    );
-
-    if (response.statusCode == 200) {
-      print('Notification sent successfully');
-    } else {
-      print('Failed to send notification: ${response.body}');
-    }
-  }
-
   void _filterEvents() {
     final query = _searchController.text.toLowerCase();
     setState(() {
@@ -124,12 +91,7 @@ void _joinEvent(String eventId) async {
         'participants': FieldValue.arrayUnion([currentUser!.uid]),
       });
 
-      final eventCreatorDoc = await FirebaseFirestore.instance.collection('users').doc(event?['userId']).get();
-      final eventCreatorToken = eventCreatorDoc.data()?['fcmToken'];
-
-      if (eventCreatorToken != null) {
-        await sendNotification(eventCreatorToken, 'New Event Join', 'Someone has joined your event!');
-      }
+    
 
       if (mounted) {
         setState(() {
