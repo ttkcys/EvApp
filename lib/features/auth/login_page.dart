@@ -101,7 +101,7 @@ class _LoginPageState extends State<LoginPage> {
                         contentPadding: const EdgeInsets.symmetric(
                             vertical: 10, horizontal: 15),
                         border: const OutlineInputBorder(),
-                        labelText: 'Password',
+                        labelText: 'Şifre',
                         prefixIcon: const Icon(Icons.lock),
                         suffixIcon: IconButton(
                           icon: Icon(_obscurePassword
@@ -140,7 +140,7 @@ class _LoginPageState extends State<LoginPage> {
                   );
                 },
                 child: const Text(
-                  'Not yet registered? SignUp Now',
+                  'Henüz Üye Değil misiniz? Üye Ol',
                   style: TextStyle(
                     color: AppColorConstants.orange,
                   ),

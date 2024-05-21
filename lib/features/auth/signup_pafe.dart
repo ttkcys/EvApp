@@ -33,6 +33,7 @@ class _SignUpPageState extends State<SignUpPage> {
     final pickedFile =
         await ImagePicker().pickImage(source: ImageSource.gallery);
     if (pickedFile != null) {
+      if (!mounted) return; 
       setState(() {
         _profileImage = File(pickedFile.path);
       });
@@ -54,6 +55,7 @@ class _SignUpPageState extends State<SignUpPage> {
   }
 
   void _showSuccessDialog() {
+    if (!mounted) return; 
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -77,6 +79,7 @@ class _SignUpPageState extends State<SignUpPage> {
   }
 
   void _signUp() async {
+    if (!mounted) return;
     setState(() {
       _isLoading = true;
     });
@@ -97,18 +100,22 @@ class _SignUpPageState extends State<SignUpPage> {
         'phone': _phoneController.text.trim(),
         'email': _emailController.text.trim(),
         'profilePhoto':
-            profilePhotoUrl ?? '', // Ensure this field is always set
+            profilePhotoUrl ?? '',
       });
 
-      _showSuccessDialog();
+      if (mounted) {
+        _showSuccessDialog();
+      }
     } on FirebaseAuthException catch (e) {
       print('Error: ${e.message}');
     } catch (e) {
       print('Error: $e');
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -173,7 +180,7 @@ class _SignUpPageState extends State<SignUpPage> {
                                 contentPadding: EdgeInsets.symmetric(
                                     vertical: 10, horizontal: 15),
                                 border: OutlineInputBorder(),
-                                labelText: 'Name and Surname',
+                                labelText: 'Adı ve Soyadı',
                                 prefixIcon: Icon(Icons.person),
                               ),
                             ),
@@ -184,7 +191,7 @@ class _SignUpPageState extends State<SignUpPage> {
                                 contentPadding: EdgeInsets.symmetric(
                                     vertical: 10, horizontal: 15),
                                 border: OutlineInputBorder(),
-                                labelText: 'Cinsiyet',
+                                labelText: 'Cinsiyeti',
                                 prefixIcon: Icon(Icons.person),
                               ),
                               items: <String>[
@@ -210,7 +217,7 @@ class _SignUpPageState extends State<SignUpPage> {
                                 contentPadding: EdgeInsets.symmetric(
                                     vertical: 10, horizontal: 15),
                                 border: OutlineInputBorder(),
-                                labelText: 'Yaş',
+                                labelText: 'Yaşı',
                                 prefixIcon: Icon(Icons.person),
                               ),
                             ),
@@ -218,13 +225,13 @@ class _SignUpPageState extends State<SignUpPage> {
                             TextFormField(
                               controller: _phoneController,
                               keyboardType: TextInputType.phone,
-                              maxLength: 10, // Limit the input to 10 characters
+                              maxLength: 10, 
                               decoration: const InputDecoration(
                                 contentPadding: EdgeInsets.symmetric(
                                     vertical: 10, horizontal: 15),
                                 border: OutlineInputBorder(),
-                                labelText: 'Phone',
-                                hintText: '555 555 5555', // Set hint text
+                                labelText: 'Telefon Numarası',
+                                hintText: '555 555 5555',
                                 prefixIcon: Icon(Icons.phone),
                               ),
                             ),
@@ -248,7 +255,7 @@ class _SignUpPageState extends State<SignUpPage> {
                                 contentPadding: const EdgeInsets.symmetric(
                                     vertical: 10, horizontal: 15),
                                 border: const OutlineInputBorder(),
-                                labelText: 'Password',
+                                labelText: 'Şifre',
                                 prefixIcon: const Icon(Icons.lock),
                                 suffixIcon: IconButton(
                                   icon: Icon(_obscurePassword
@@ -288,7 +295,7 @@ class _SignUpPageState extends State<SignUpPage> {
                           );
                         },
                         child: const Text(
-                          'Already have access? LogIn Now',
+                          'Zaten Hesabın Var mı?? Giriş Yap',
                           style: TextStyle(color: AppColorConstants.orange),
                         ),
                       ),

@@ -64,6 +64,7 @@ class _SettingsPageState extends State<SettingsPage> {
           });
         }
       }
+      print("Participants fetched: $participants"); // Debugging statement
     }
   }
 
