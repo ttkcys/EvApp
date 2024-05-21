@@ -41,7 +41,7 @@ class _EventPageState extends State<EventPage> {
       setState(() {
         events = querySnapshot.docs.map((doc) {
           final data = doc.data() as Map<String, dynamic>;
-          data['id'] = doc.id; 
+          data['id'] = doc.id;
           return data;
         }).toList();
         filteredEvents = events;
@@ -51,10 +51,14 @@ class _EventPageState extends State<EventPage> {
 
   Future<void> _fetchJoinedEvents() async {
     if (currentUser != null) {
-      final userDoc = await FirebaseFirestore.instance.collection('users').doc(currentUser!.uid).get();
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(currentUser!.uid)
+          .get();
       if (mounted) {
         setState(() {
-          joinedEvents = List<String>.from(userDoc.data()?['joinedEvents'] ?? []);
+          joinedEvents =
+              List<String>.from(userDoc.data()?['joinedEvents'] ?? []);
         });
       }
     }
@@ -75,14 +79,19 @@ class _EventPageState extends State<EventPage> {
   }
 
   void _joinEvent(String eventId) async {
-    final eventDoc = await FirebaseFirestore.instance.collection('events').doc(eventId).get();
+    final eventDoc = await FirebaseFirestore.instance
+        .collection('events')
+        .doc(eventId)
+        .get();
     final event = eventDoc.data();
     final participants = List<String>.from(event?['participants'] ?? []);
     final participantLimit = event?['participantLimit'] ?? 0;
 
     if (participants.length < participantLimit) {
       if (currentUser != null) {
-        final userDoc = FirebaseFirestore.instance.collection('users').doc(currentUser!.uid);
+        final userDoc = FirebaseFirestore.instance
+            .collection('users')
+            .doc(currentUser!.uid);
         await userDoc.update({
           'joinedEvents': FieldValue.arrayUnion([eventId]),
         });
@@ -121,11 +130,15 @@ class _EventPageState extends State<EventPage> {
 
   void _leaveEvent(String eventId) async {
     if (currentUser != null) {
-      final userDoc = FirebaseFirestore.instance.collection('users').doc(currentUser!.uid);
+      final userDoc =
+          FirebaseFirestore.instance.collection('users').doc(currentUser!.uid);
       await userDoc.update({
         'joinedEvents': FieldValue.arrayRemove([eventId]),
       });
-      await FirebaseFirestore.instance.collection('events').doc(eventId).update({
+      await FirebaseFirestore.instance
+          .collection('events')
+          .doc(eventId)
+          .update({
         'participants': FieldValue.arrayRemove([currentUser!.uid]),
       });
       if (mounted) {
@@ -134,6 +147,11 @@ class _EventPageState extends State<EventPage> {
         });
       }
     }
+  }
+
+  Future<void> _refreshEvents() async {
+    await _fetchEvents();
+    await _fetchJoinedEvents();
   }
 
   void _copyLocation(String location) {
@@ -163,120 +181,125 @@ class _EventPageState extends State<EventPage> {
             ),
           ),
           Expanded(
-            child: ListView.builder(
-              itemCount: filteredEvents.length,
-              itemBuilder: (context, index) {
-                final event = filteredEvents[index];
-                final isJoined = joinedEvents.contains(event['id']);
-                final isOwner = event['userId'] == currentUser?.uid;
-                final creationDate =
-                    (event['creationDate'] as Timestamp).toDate();
+            child: RefreshIndicator(
+              onRefresh: _refreshEvents,
+              child: ListView.builder(
+                itemCount: filteredEvents.length,
+                itemBuilder: (context, index) {
+                  final event = filteredEvents[index];
+                  final isJoined = joinedEvents.contains(event['id']);
+                  final isOwner = event['userId'] == currentUser?.uid;
+                  final creationDate =
+                      (event['creationDate'] as Timestamp).toDate();
 
-                final location = '${event['city']}, ${event['district']}, ${event['neighborhood']}';
+                  final location =
+                      '${event['city']}, ${event['district']}, ${event['neighborhood']}';
 
-                return Card(
-                  margin: const EdgeInsets.all(10.0),
-                  child: Padding(
-                    padding: const EdgeInsets.all(10.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            CircleAvatar(
-                              backgroundImage: NetworkImage(
-                                event['profilePhoto'] ??
-                                    'https://via.placeholder.com/150',
-                              ),
-                              radius: 20,
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Text(
-                                event['userName'] ?? 'Etkinlik açan kişi',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
+                  return Card(
+                    margin: const EdgeInsets.all(10.0),
+                    child: Padding(
+                      padding: const EdgeInsets.all(10.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              CircleAvatar(
+                                backgroundImage: NetworkImage(
+                                  event['profilePhoto'] ??
+                                      'https://via.placeholder.com/150',
                                 ),
+                                radius: 20,
                               ),
-                            ),
-                            Text(
-                              '${creationDate.day}/${creationDate.month}/${creationDate.year}', 
-                              style: const TextStyle(
-                                color: Colors.grey,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 10),
-                        Text(event['eventName'] ?? ''),
-                        const SizedBox(height: 10),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Expanded(
-                              child: Container(
-                                padding: const EdgeInsets.all(10.0),
-                                decoration: BoxDecoration(
-                                  color: Colors.grey[200],
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text('Tarih: ${event['date']}'),
-                                    const SizedBox(height: 8),
-                                    Row(
-                                      children: [
-                                        Expanded(
-                                          child: Text('Yer: $location'),
-                                        ),
-                                        IconButton(
-                                          icon: const Icon(Icons.copy),
-                                          onPressed: () {
-                                            _copyLocation(location);
-                                          },
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Text('Açıklama: ${event['explain']}'),
-                                  ],
-                                ),
-                              ),
-                            ),
-                            isOwner
-                                ? TextButton(
-                                    onPressed: () {
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (context) => SettingsPage(
-                                            eventId: event['id'],
-                                            eventData: event,
-                                          ),
-                                        ),
-                                      );
-                                    },
-                                    child: const Text('Ayarlar'),
-                                  )
-                                : TextButton(
-                                    onPressed: () {
-                                      if (isJoined) {
-                                        _leaveEvent(event['id']);
-                                      } else {
-                                        _joinEvent(event['id']);
-                                      }
-                                    },
-                                    child:
-                                        Text(isJoined ? 'Katıldın' : 'Katıl'),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  event['userName'] ?? 'Etkinlik açan kişi',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
                                   ),
-                          ],
-                        ),
-                      ],
+                                ),
+                              ),
+                              Text(
+                                '${creationDate.day}/${creationDate.month}/${creationDate.year}',
+                                style: const TextStyle(
+                                  color: Colors.grey,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          Text(event['eventName'] ?? ''),
+                          const SizedBox(height: 10),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: Container(
+                                  padding: const EdgeInsets.all(10.0),
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey[200],
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text('Tarih: ${event['date']}'),
+                                      const SizedBox(height: 8),
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: Text('Yer: $location'),
+                                          ),
+                                          IconButton(
+                                            icon: const Icon(Icons.copy),
+                                            onPressed: () {
+                                              _copyLocation(location);
+                                            },
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Text('Açıklama: ${event['explain']}'),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              isOwner
+                                  ? TextButton(
+                                      onPressed: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) => SettingsPage(
+                                              eventId: event['id'],
+                                              eventData: event,
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                      child: const Text('Ayarlar'),
+                                    )
+                                  : TextButton(
+                                      onPressed: () {
+                                        if (isJoined) {
+                                          _leaveEvent(event['id']);
+                                        } else {
+                                          _joinEvent(event['id']);
+                                        }
+                                      },
+                                      child:
+                                          Text(isJoined ? 'Katıldın' : 'Katıl'),
+                                    ),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                );
-              },
+                  );
+                },
+              ),
             ),
           ),
         ],
