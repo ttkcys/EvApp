@@ -120,8 +120,14 @@ class _SettingsPageState extends State<SettingsPage> {
 
   Future<void> _removeParticipant(String participantId) async {
     final eventDoc = FirebaseFirestore.instance.collection('events').doc(widget.eventId);
+    final userDoc = FirebaseFirestore.instance.collection('users').doc(participantId);
+
     await eventDoc.update({
       'participants': FieldValue.arrayRemove([participantId]),
+    });
+
+    await userDoc.update({
+      'joinedEvents': FieldValue.arrayRemove([widget.eventId]),
     });
 
     setState(() {
@@ -253,8 +259,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 decoration: const InputDecoration(
                   labelText: 'Katılımcı Sayısı',
                 ),
-                items: List.generate(50, (index) => index + 1)
-                    .map((int value) {
+                items: List.generate(50, (index) => index + 1).map((int value) {
                   return DropdownMenuItem<int>(
                     value: value,
                     child: Text(value.toString()),

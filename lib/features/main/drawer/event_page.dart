@@ -35,31 +35,30 @@ class _EventPageState extends State<EventPage> {
   }
 
   Future<void> _fetchEvents() async {
-  final eventsCollection = FirebaseFirestore.instance.collection('events');
-  final querySnapshot = await eventsCollection.get();
-  if (mounted) {
-    setState(() {
-      events = querySnapshot.docs.map((doc) {
-        final data = doc.data() as Map<String, dynamic>;
-        data['id'] = doc.id; 
-        return data;
-      }).toList();
-      filteredEvents = events;
-    });
-  }
-}
-
-Future<void> _fetchJoinedEvents() async {
-  if (currentUser != null) {
-    final userDoc = await FirebaseFirestore.instance.collection('users').doc(currentUser!.uid).get();
+    final eventsCollection = FirebaseFirestore.instance.collection('events');
+    final querySnapshot = await eventsCollection.get();
     if (mounted) {
       setState(() {
-        joinedEvents = List<String>.from(userDoc.data()?['joinedEvents'] ?? []);
+        events = querySnapshot.docs.map((doc) {
+          final data = doc.data() as Map<String, dynamic>;
+          data['id'] = doc.id; 
+          return data;
+        }).toList();
+        filteredEvents = events;
       });
     }
   }
-}
 
+  Future<void> _fetchJoinedEvents() async {
+    if (currentUser != null) {
+      final userDoc = await FirebaseFirestore.instance.collection('users').doc(currentUser!.uid).get();
+      if (mounted) {
+        setState(() {
+          joinedEvents = List<String>.from(userDoc.data()?['joinedEvents'] ?? []);
+        });
+      }
+    }
+  }
 
   void _filterEvents() {
     final query = _searchController.text.toLowerCase();
@@ -75,69 +74,67 @@ Future<void> _fetchJoinedEvents() async {
     });
   }
 
-void _joinEvent(String eventId) async {
-  final eventDoc = await FirebaseFirestore.instance.collection('events').doc(eventId).get();
-  final event = eventDoc.data();
-  final participants = List<String>.from(event?['participants'] ?? []);
-  final participantLimit = event?['participantLimit'] ?? 0;
+  void _joinEvent(String eventId) async {
+    final eventDoc = await FirebaseFirestore.instance.collection('events').doc(eventId).get();
+    final event = eventDoc.data();
+    final participants = List<String>.from(event?['participants'] ?? []);
+    final participantLimit = event?['participantLimit'] ?? 0;
 
-  if (participants.length < participantLimit) {
+    if (participants.length < participantLimit) {
+      if (currentUser != null) {
+        final userDoc = FirebaseFirestore.instance.collection('users').doc(currentUser!.uid);
+        await userDoc.update({
+          'joinedEvents': FieldValue.arrayUnion([eventId]),
+        });
+        await eventDoc.reference.update({
+          'participants': FieldValue.arrayUnion([currentUser!.uid]),
+        });
+
+        if (mounted) {
+          setState(() {
+            joinedEvents.add(eventId);
+          });
+        }
+      }
+    } else {
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (context) {
+            return AlertDialog(
+              title: const Text('Katılımcı Sınırına Ulaşıldı'),
+              content: const Text('Bu etkinliğe katılımcı sınırına ulaşıldı.'),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                  },
+                  child: const Text('Tamam'),
+                ),
+              ],
+            );
+          },
+        );
+      }
+    }
+  }
+
+  void _leaveEvent(String eventId) async {
     if (currentUser != null) {
       final userDoc = FirebaseFirestore.instance.collection('users').doc(currentUser!.uid);
       await userDoc.update({
-        'joinedEvents': FieldValue.arrayUnion([eventId]),
+        'joinedEvents': FieldValue.arrayRemove([eventId]),
       });
-      await eventDoc.reference.update({
-        'participants': FieldValue.arrayUnion([currentUser!.uid]),
+      await FirebaseFirestore.instance.collection('events').doc(eventId).update({
+        'participants': FieldValue.arrayRemove([currentUser!.uid]),
       });
-
-    
-
       if (mounted) {
         setState(() {
-          joinedEvents.add(eventId);
+          joinedEvents.remove(eventId);
         });
       }
     }
-  } else {
-    if (mounted) {
-      showDialog(
-        context: context,
-        builder: (context) {
-          return AlertDialog(
-            title: const Text('Katılımcı Sınırına Ulaşıldı'),
-            content: const Text('Bu etkinliğe katılımcı sınırına ulaşıldı.'),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                },
-                child: const Text('Tamam'),
-              ),
-            ],
-          );
-        },
-      );
-    }
   }
-}
-
- void _leaveEvent(String eventId) async {
-  if (currentUser != null) {
-    final userDoc = FirebaseFirestore.instance.collection('users').doc(currentUser!.uid);
-    await userDoc.update({
-      'joinedEvents': FieldValue.arrayRemove([eventId]),
-    });
-    await FirebaseFirestore.instance.collection('events').doc(eventId).update({
-      'participants': FieldValue.arrayRemove([currentUser!.uid]),
-    });
-    if (mounted) {
-      setState(() {
-        joinedEvents.remove(eventId);
-      });
-    }
-  }
-}
 
   void _copyLocation(String location) {
     Clipboard.setData(ClipboardData(text: location));
