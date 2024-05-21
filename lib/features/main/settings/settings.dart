@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:evapp/constants/app_color_constants.dart';
 
@@ -6,7 +7,8 @@ class SettingsPage extends StatefulWidget {
   final String eventId;
   final Map<String, dynamic> eventData;
 
-  const SettingsPage({super.key, required this.eventId, required this.eventData});
+  const SettingsPage(
+      {super.key, required this.eventId, required this.eventData});
 
   @override
   State<SettingsPage> createState() => _SettingsPageState();
@@ -52,12 +54,17 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Future<void> _fetchParticipants() async {
-    final eventDoc = FirebaseFirestore.instance.collection('events').doc(widget.eventId);
+    final eventDoc =
+        FirebaseFirestore.instance.collection('events').doc(widget.eventId);
     final docSnapshot = await eventDoc.get();
     if (docSnapshot.exists) {
-      final participantIds = List<String>.from(docSnapshot.data()?['participants'] ?? []);
+      final participantIds =
+          List<String>.from(docSnapshot.data()?['participants'] ?? []);
       for (var participantId in participantIds) {
-        final userDoc = await FirebaseFirestore.instance.collection('users').doc(participantId).get();
+        final userDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(participantId)
+            .get();
         if (userDoc.exists) {
           setState(() {
             participants[participantId] = userDoc.data()?['name'] ?? 'Unknown';
@@ -77,7 +84,8 @@ class _SettingsPageState extends State<SettingsPage> {
       final date = _dateController.text.trim();
       final explain = _explainController.text.trim();
 
-      final eventDoc = FirebaseFirestore.instance.collection('events').doc(widget.eventId);
+      final eventDoc =
+          FirebaseFirestore.instance.collection('events').doc(widget.eventId);
       await eventDoc.update({
         'eventName': eventName,
         'city': city,
@@ -95,7 +103,8 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Future<void> _deleteEvent() async {
-    final eventDoc = FirebaseFirestore.instance.collection('events').doc(widget.eventId);
+    final eventDoc =
+        FirebaseFirestore.instance.collection('events').doc(widget.eventId);
     await eventDoc.delete();
 
     showDialog(
@@ -119,38 +128,47 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Future<void> _removeParticipant(String participantId) async {
-    final eventDoc = FirebaseFirestore.instance.collection('events').doc(widget.eventId);
-    final userDoc = FirebaseFirestore.instance.collection('users').doc(participantId);
+    final eventDoc =
+        FirebaseFirestore.instance.collection('events').doc(widget.eventId);
+    final userDoc =
+        FirebaseFirestore.instance.collection('users').doc(participantId);
 
-    await eventDoc.update({
-      'participants': FieldValue.arrayRemove([participantId]),
-    });
+    final currentUser = FirebaseAuth.instance.currentUser;
 
-    await userDoc.update({
-      'joinedEvents': FieldValue.arrayRemove([widget.eventId]),
-    });
+    if (currentUser != null) {
+      await eventDoc.update({
+        'participants': FieldValue.arrayRemove([participantId]),
+      });
 
-    setState(() {
-      participants.remove(participantId);
-    });
+      await userDoc.update({
+        'joinedEvents': FieldValue.arrayRemove([widget.eventId]),
+      });
 
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Başarılı!'),
-          content: const Text('Katılımcı başarıyla kaldırıldı.'),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: const Text('Tamam'),
-            ),
-          ],
-        );
-      },
-    );
+      setState(() {
+        participants.remove(participantId);
+      });
+
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: const Text('Başarılı!'),
+            content: const Text('Katılımcı başarıyla kaldırıldı.'),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+                child: const Text('Tamam'),
+              ),
+            ],
+          );
+        },
+      );
+    } else {
+      // Handle the error case where the user is not authenticated
+      print("Error: User not authenticated");
+    }
   }
 
   @override
@@ -298,11 +316,13 @@ class _SettingsPageState extends State<SettingsPage> {
                 itemCount: participants.length,
                 itemBuilder: (context, index) {
                   final participantId = participants.keys.elementAt(index);
-                  final participantName = participants[participantId] ?? 'Unknown';
+                  final participantName =
+                      participants[participantId] ?? 'Unknown';
                   return ListTile(
                     title: Text(participantName),
                     trailing: IconButton(
-                      icon: const Icon(Icons.close, color: AppColorConstants.red),
+                      icon:
+                          const Icon(Icons.close, color: AppColorConstants.red),
                       onPressed: () {
                         _removeParticipant(participantId);
                       },
